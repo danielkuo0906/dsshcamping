@@ -1,0 +1,674 @@
+<!doctype html>
+<html lang="zh-TW">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>露營簡報</title>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+  <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+  <style>
+    /* 全域設定 */
+    body {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #2d3748;
+      height: 100%;
+      overflow-y: auto;
+    }
+    html { height: 100%; }
+
+    /* 佈局容器 */
+    .container {
+      width: 100%;
+      min-height: 100%;
+      padding: 2.5rem 1.5rem;
+      background: linear-gradient(135deg, #228B22 0%, #006400 100%);
+      display: flex;
+      gap: 1.5rem;
+      box-sizing: border-box;
+    }
+
+    .main-content {
+      flex: 1;
+      min-width: 0; /* 防止 flex item 溢出 */
+    }
+
+    /* 側邊欄樣式 */
+    .sidebar {
+      width: 320px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      position: sticky;
+      top: 1.5rem;
+      height: fit-content;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      flex-shrink: 0;
+    }
+
+    .sidebar-title {
+      color: white;
+      font-size: 1.25rem;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 1rem;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+
+    /* 籃球遊戲區樣式 */
+    .game-area {
+      background: linear-gradient(135deg, rgba(52, 152, 219, 0.3) 0%, rgba(41, 128, 185, 0.3) 100%);
+      border-radius: 0.75rem;
+      height: 400px;
+      position: relative;
+      overflow: hidden;
+      border: 3px solid rgba(255,255,255,0.3);
+      cursor: crosshair;
+    }
+
+    .basketball {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #FF8C42, #FF6B35);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.4), inset -5px -5px 10px rgba(0,0,0,0.3);
+      cursor: pointer;
+      transition: transform 0.1s;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+    }
+    .basketball:hover { transform: translateX(-50%) scale(1.1); }
+    .basketball::before { content: ''; position: absolute; width: 100%; height: 2px; background: rgba(0,0,0,0.3); top: 50%; left: 0; transform: translateY(-50%); }
+    .basketball::after { content: ''; position: absolute; width: 2px; height: 100%; background: rgba(0,0,0,0.3); left: 50%; top: 0; transform: translateX(-50%); }
+
+    .hoop { position: absolute; top: 60px; left: 50%; transform: translateX(-50%); width: 80px; height: 15px; z-index: 5; }
+    .hoop-rim { width: 100%; height: 8px; background: linear-gradient(135deg, #E74C3C 0%, #C0392B 100%); border-radius: 50%; box-shadow: 0 3px 8px rgba(0,0,0,0.5); position: relative; }
+    .hoop-net { position: absolute; top: 8px; left: 10%; width: 80%; height: 40px; border-left: 2px solid rgba(255,255,255,0.4); border-right: 2px solid rgba(255,255,255,0.4); border-bottom: 2px solid rgba(255,255,255,0.4); border-radius: 0 0 50% 50%; }
+
+    .backboard { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); width: 100px; height: 70px; background: rgba(255,255,255,0.2); border: 3px solid rgba(255,255,255,0.5); border-radius: 0.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+    .backboard-square { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40px; height: 30px; border: 2px solid rgba(255,255,255,0.6); }
+
+    .score-display { color: white; text-align: center; margin-top: 1rem; font-size: 1rem; font-weight: bold; text-shadow: 1px 1px 3px rgba(0,0,0,0.5); }
+    .score-board { background: rgba(0,0,0,0.3); padding: 0.75rem; border-radius: 0.5rem; margin-bottom: 1rem; }
+    .score-row { display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem; color: white; }
+    .score-row:last-child { margin-bottom: 0; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.3); font-size: 1.1rem; }
+
+    .camping-images { margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+    .camping-icon { background: rgba(255,255,255,0.15); border-radius: 0.75rem; padding: 1rem; text-align: center; font-size: 3rem; transition: all 0.3s; border: 2px solid rgba(255,255,255,0.2); cursor: pointer; }
+    .camping-icon:hover { background: rgba(255,255,255,0.25); transform: scale(1.05); border-color: rgba(255,255,255,0.4); }
+
+    /* 動畫 Keyframes */
+    @keyframes show-result { 0% { opacity: 0; transform: scale(0.5); } 50% { opacity: 1; transform: scale(1.2); } 100% { opacity: 1; transform: scale(1); } }
+    @keyframes score-flash { 0%, 100% { background: rgba(0,0,0,0.3); } 50% { background: rgba(46, 204, 113, 0.5); } }
+    @keyframes miss-flash { 0%, 100% { background: rgba(0,0,0,0.3); } 50% { background: rgba(239, 68, 68, 0.5); } }
+
+    /* 主要內容樣式 */
+    .header { text-align: center; margin-bottom: 2.5rem; background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+    .main-title { font-size: 2.5rem; font-weight: bold; color: #FF6B35; margin: 0 0 0.5rem 0; }
+    .subtitle { font-size: 1.25rem; color: #718096; margin: 0; }
+
+    /* 圖片樣式 (整合穩定版) */
+    .header-image-container { margin-bottom: 1.5rem; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .header-image { max-width: 100%; max-height: 500px; width: auto; border-radius: 0.75rem; box-shadow: 0 4px 15px rgba(0,0,0,0.2); object-fit: contain; display: block; }
+    .error-msg { display: none; background-color: #fff5f5; border: 2px dashed #fc8181; padding: 1.5rem; border-radius: 0.75rem; color: #c53030; text-align: left; margin-top: 1rem; width: 100%; max-width: 500px; }
+    .error-msg h3 { margin-top: 0; display: flex; align-items: center; gap: 0.5rem; }
+
+    /* 卡片與列表樣式 */
+    .section { background: white; border-radius: 1rem; padding: 1.75rem; margin-bottom: 1.5rem; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    .section-title { font-size: 1.5rem; font-weight: bold; color: #004E89; margin: 0 0 1.25rem 0; padding-bottom: 0.75rem; border-bottom: 3px solid #FF6B35; display: flex; align-items: center; gap: 0.5rem; }
+    .category { margin-bottom: 1.5rem; }
+    .category:last-child { margin-bottom: 0; }
+    .category-title { font-size: 1.125rem; font-weight: bold; color: #4a5568; margin: 0 0 0.75rem 0; display: flex; align-items: center; gap: 0.5rem; }
+    .item-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.75rem; }
+    .item { background: #f7fafc; padding: 0.75rem 1rem; border-radius: 0.5rem; border-left: 4px solid #FF6B35; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s; }
+    .item:hover { background: #edf2f7; transform: translateX(4px); box-shadow: 0 2px 8px rgba(255, 107, 53, 0.2); }
+    .item-name { font-size: 0.95rem; color: #2d3748; font-weight: 500; }
+    .item-person { font-size: 0.85rem; color: white; padding: 0.25rem 0.75rem; border-radius: 1rem; font-weight: 600; white-space: nowrap; }
+
+    /* 人員顏色 */
+    .person-uj { background: #667eea; } .person-wen { background: #f56565; } .person-jy { background: #48bb78; }
+    .person-niger { background: #ed8936; } .person-six { background: #9f7aea; } .person-datou { background: #e53e3e; }
+    .person-self { background: #38b2ac; } .person-default { background: #a0aec0; } .person-guochu { background: #FFA500; }
+
+    .people-count { background: #FFD700; color: #2d3748; padding: 0.75rem 1.5rem; border-radius: 0.75rem; text-align: center; font-size: 1.125rem; font-weight: bold; margin-bottom: 1.5rem; box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4); }
+    .legend { background: white; border-radius: 1rem; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    .legend-title { font-size: 1.125rem; font-weight: bold; color: #4a5568; margin: 0 0 0.75rem 0; }
+    .legend-items { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+    .legend-item { display: flex; align-items: center; gap: 0.5rem; }
+    .legend-color { width: 1.5rem; height: 1.5rem; border-radius: 0.5rem; }
+    .legend-name { font-size: 0.9rem; color: #2d3748; font-weight: 500; }
+
+    /* 帳篷卡片 */
+    .tent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.25rem; }
+    .tent-card { background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%); border-radius: 0.75rem; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.08); border: 2px solid #e2e8f0; transition: all 0.3s; }
+    .tent-card:hover { transform: translateY(-4px); box-shadow: 0 6px 20px rgba(255, 107, 53, 0.15); border-color: #FF6B35; }
+    .tent-header { background: linear-gradient(135deg, #D4A373 0%, #C89968 100%); padding: 1rem 1.25rem; }
+    .tent-title { font-size: 1.125rem; font-weight: bold; color: white; margin: 0; }
+    .tent-members { padding: 1rem; }
+    .member-row { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; margin-bottom: 0.5rem; background: white; border-radius: 0.5rem; border-left: 3px solid #FF6B35; }
+    .member-row:last-child { margin-bottom: 0; }
+    .member-name { font-size: 0.95rem; font-weight: 600; color: #2d3748; }
+    .day-badges { display: flex; gap: 0.35rem; }
+    .day-badge { font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 0.35rem; font-weight: 600; }
+    .day-active { background: #48bb78; color: white; }
+    .day-inactive { background: #e2e8f0; color: #a0aec0; }
+
+    /* 導航按鈕樣式 */
+    .nav-btn { flex: 1; max-width: 150px; padding: 0.75rem 1rem; font-size: 0.95rem; font-weight: bold; border-radius: 0.75rem; cursor: pointer; transition: all 0.3s; white-space: nowrap; }
+    .nav-btn-active { background: linear-gradient(135deg, #FF6B35 0%, #FF8C55 100%); color: white; border: none; box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4); }
+    .nav-btn-inactive { background: white; color: #718096; border: 2px solid #e2e8f0; }
+
+    /* 費用表單樣式 */
+    .expense-form-container { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 1rem; border-radius: 0.75rem; margin-bottom: 1.5rem; }
+    .expense-form-title { font-weight: bold; color: #166534; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; }
+    .expense-input-group { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .expense-input { padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 0.375rem; font-size: 0.95rem; }
+    .expense-btn-add { background: #166534; color: white; font-weight: bold; padding: 0.5rem 1.25rem; border-radius: 0.375rem; transition: background 0.2s; }
+    .expense-btn-add:hover { background: #14532d; }
+
+    .footer { text-align: center; background: white; padding: 1.5rem; border-radius: 1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.1); color: #718096; font-size: 0.95rem; }
+
+    @media (max-width: 1024px) {
+      .container { flex-direction: column; padding: 1.5rem 1rem; }
+      .sidebar { width: 100%; position: static; order: 2; /* 手機版時讓側邊欄排到下面 */ }
+      .main-content { order: 1; }
+      .game-area { height: 300px; }
+      .main-title { font-size: 2rem; }
+      .item-grid, .tent-grid { grid-template-columns: 1fr; }
+      .day-badges { flex-direction: column; gap: 0.25rem; }
+      .day-badge { text-align: center; }
+      /* 手機版導航按鈕 */
+      .nav-group { flex-wrap: wrap; }
+      .nav-btn { max-width: none; width: 45%; }
+      /* 費用表單手機版 */
+      .expense-input { width: 100%; }
+    }
+  </style>
+ </head>
+ <body>
+  <div class="container">
+   <!-- 主要內容區 -->
+   <main class="main-content">
+    <header class="header">
+     <h1 class="main-title" id="mainTitle">15人露營裝備清單</h1>
+     <p class="subtitle" id="subtitle">完整規劃 · 輕鬆出遊</p>
+     
+     <!-- 圖片區域 -->
+     <div class="header-image-container">
+        <img src="https://lh3.googleusercontent.com/d/1xUP8ZaVrMFOI_KszLRvyfKpu5QsuGN2R" 
+             alt="15人露營活動合照" 
+             class="header-image"
+             referrerpolicy="no-referrer"
+             onerror="this.style.display='none'; document.getElementById('error-guide').style.display='block';">
+        <div id="error-guide" class="error-msg">
+            <h3>⚠️ 圖片無法顯示？</h3>
+            <p>請確認 Google Drive 圖片權限已設為「知道連結的任何人」可檢視。</p>
+        </div>
+     </div>
+
+     <!-- 四個分頁導航 -->
+     <div class="nav-group" style="display: flex; gap: 0.75rem; justify-content: center; margin-top: 1.5rem;">
+        <button id="tabEquipment" onclick="switchTab('equipment')" class="nav-btn nav-btn-active">📦 裝備清單</button> 
+        <button id="tabSchedule" onclick="switchTab('schedule')" class="nav-btn nav-btn-inactive">📅 行程規劃</button>
+        <button id="tabPacking" onclick="switchTab('packing')" class="nav-btn nav-btn-inactive">🎒 要帶的東西</button>
+        <button id="tabExpenses" onclick="switchTab('expenses')" class="nav-btn nav-btn-inactive">💰 花費金額</button>
+     </div>
+    </header>
+
+    <!-- Tab 1: 裝備清單頁面 -->
+    <div id="equipmentPage">
+     <div class="people-count">👥 參與人數: 15人 | 📅 日期: 12/12-14</div>
+     <div class="legend">
+      <div class="legend-title">👤 人員顏色標示</div>
+      <div class="legend-items">
+       <div class="legend-item"><div class="legend-color person-uj"></div><span class="legend-name">UJ</span></div>
+       <div class="legend-item"><div class="legend-color person-wen"></div><span class="legend-name">Wen</span></div>
+       <div class="legend-item"><div class="legend-color person-jy"></div><span class="legend-name">JY</span></div>
+       <div class="legend-item"><div class="legend-color person-niger"></div><span class="legend-name">Niger</span></div>
+       <div class="legend-item"><div class="legend-color person-six"></div><span class="legend-name">六</span></div>
+       <div class="legend-item"><div class="legend-color person-datou"></div><span class="legend-name">大頭</span></div>
+       <div class="legend-item"><div class="legend-color person-self"></div><span class="legend-name">自備</span></div>
+       <div class="legend-item"><div class="legend-color person-guochu"></div><span class="legend-name">郭初</span></div>
+       <div class="legend-item"><div class="legend-color person-default"></div><span class="legend-name">待分配</span></div>
+      </div>
+     </div>
+
+     <!-- 帳篷分配 -->
+     <section class="section">
+      <h2 class="section-title">🏕️ 帳篷分配與人員日程</h2>
+      <div class="tent-grid">
+       <div class="tent-card"><div class="tent-header"><div class="tent-title">🏠 UJ帳篷 (自有)</div></div><div class="tent-members"><div class="member-row"><span class="member-name">UJ</span><div class="day-badges"><span class="day-badge day-active">夜衝</span></div></div><div class="member-row"><span class="member-name">宜珊</span><div class="day-badges"><span class="day-badge day-active">夜衝</span></div></div><div class="member-row"><span class="member-name">宇凡</span><div class="day-badges"><span class="day-badge day-active">夜衝</span></div></div></div></div>
+       <div class="tent-card"><div class="tent-header"><div class="tent-title">🏠 力樊帳篷</div></div><div class="tent-members"><div class="member-row"><span class="member-name">力樊</span><div class="day-badges"><span class="day-badge day-inactive">夜衝</span></div></div><div class="member-row"><span class="member-name">靜汶</span><div class="day-badges"><span class="day-badge day-inactive">夜衝</span></div></div></div></div>
+       <div class="tent-card"><div class="tent-header"><div class="tent-title">🏠 YC帳篷</div></div><div class="tent-members"><div class="member-row"><span class="member-name">YC</span><div class="day-badges"><span class="day-badge day-inactive">夜衝</span></div></div><div class="member-row"><span class="member-name">淑蓁</span><div class="day-badges"><span class="day-badge day-inactive">夜衝</span></div></div></div></div>
+       <div class="tent-card"><div class="tent-header"><div class="tent-title">🏠 任新帳篷</div></div><div class="tent-members"><div class="member-row"><span class="member-name">任新</span><div class="day-badges"><span class="day-badge day-active">夜衝</span></div></div><div class="member-row"><span class="member-name">書珊</span><div class="day-badges"><span class="day-badge day-active">夜衝</span></div></div></div></div>
+       <div class="tent-card"><div class="tent-header"><div class="tent-title">🏠 俊宇帳篷</div></div><div class="tent-members"><div class="member-row"><span class="member-name">俊宇</span><div class="day-badges"><span class="day-badge day-inactive">夜衝</span></div></div><div class="member-row"><span class="member-name">柳枚</span><div class="day-badges"><span class="day-badge day-inactive">夜衝</span></div></div></div></div>
+       <div class="tent-card"><div class="tent-header"><div class="tent-title">🏠 租借帳篷</div></div><div class="tent-members"><div class="member-row"><span class="member-name">CURRY</span><div class="day-badges"><span class="day-badge day-active">夜衝</span></div></div><div class="member-row"><span class="member-name">芸芸</span><div class="day-badges"><span class="day-badge day-active">夜衝</span></div></div><div class="member-row"><span class="member-name">郭初</span><div class="day-badges"><span class="day-badge day-active">夜衝</span></div></div><div class="member-row"><span class="member-name">丁丁</span><div class="day-badges"><span class="day-badge day-active">夜衝</span></div></div></div></div>
+      </div>
+     </section>
+
+     <!-- 工裝分配 -->
+     <section class="section">
+      <h2 class="section-title">🏕️ 工裝分配</h2>
+      <div class="category"><h3 class="category-title">⛺ 天幕</h3><div class="item-grid"><div class="item"><span class="item-name">天幕 4x3</span> <span class="item-person person-wen">Wen</span></div><div class="item"><span class="item-name">天幕 3x3</span> <span class="item-person person-uj">UJ</span></div></div></div>
+      <div class="category"><h3 class="category-title">🔥 炊事</h3><div class="item-grid"><div class="item"><span class="item-name">卡式爐(小)</span> <span class="item-person person-uj">UJ</span></div><div class="item"><span class="item-name">卡式爐</span> <span class="item-person person-niger">Niger</span></div><div class="item"><span class="item-name">瓦斯</span> <span class="item-person person-niger">Niger</span></div><div class="item"><span class="item-name">高山瓦斯 x2</span> <span class="item-person person-uj">UJ</span></div><div class="item"><span class="item-name">焚火台</span> <span class="item-person person-uj">UJ</span></div><div class="item"><span class="item-name">木頭</span> <span class="item-person person-wen">Wen</span></div><div class="item"><span class="item-name">噴燈頭</span> <span class="item-person person-wen">Wen</span></div><div class="item"><span class="item-name">木炭</span> <span class="item-person person-uj">UJ</span></div><div class="item"><span class="item-name">卡式罐 x9</span> <span class="item-person person-wen">Wen</span></div><div class="item"><span class="item-name">煤油</span> <span class="item-person person-uj">UJ</span></div></div></div>
+      <div class="category"><h3 class="category-title">🍳 廚具</h3><div class="item-grid"><div class="item"><span class="item-name">菜刀</span> <span class="item-person person-default">待分配</span></div><div class="item"><span class="item-name">煎鍋</span> <span class="item-person person-default">待分配</span></div><div class="item"><span class="item-name">大烤盤</span> <span class="item-person person-uj">UJ</span></div><div class="item"><span class="item-name">鐵盤</span> <span class="item-person person-default">待分配</span></div><div class="item"><span class="item-name">砧板</span> <span class="item-person person-guochu">郭初</span></div><div class="item"><span class="item-name">鍋子</span> <span class="item-person person-default">待分配</span></div><div class="item"><span class="item-name">鍋鏟</span> <span class="item-person person-default">待分配</span></div><div class="item"><span class="item-name">抹布</span> <span class="item-person person-guochu">郭初</span></div><div class="item"><span class="item-name">夾子</span> <span class="item-person person-guochu">郭初</span></div><div class="item"><span class="item-name">湯匙</span> <span class="item-person person-guochu">郭初</span></div><div class="item"><span class="item-name">煮水壺</span> <span class="item-person person-default">待分配</span></div></div></div>
+      <div class="category"><h3 class="category-title">🪑 桌椅</h3><div class="item-grid"><div class="item"><span class="item-name">大桌子</span> <span class="item-person person-wen">Wen</span></div><div class="item"><span class="item-name">中桌子</span> <span class="item-person person-default">待分配</span></div><div class="item"><span class="item-name">小桌子</span> <span class="item-person person-uj">UJ</span></div><div class="item"><span class="item-name">摺疊椅</span> <span class="item-person person-self">自備</span></div></div></div>
+      <div class="category"><h3 class="category-title">💡 照明</h3><div class="item-grid"><div class="item"><span class="item-name">氣氛燈</span> <span class="item-person person-guochu">郭初</span></div></div></div>
+     </section>
+
+     <!-- 食物分配 -->
+     <section class="section">
+      <h2 class="section-title">🍖 食物分配</h2>
+      <div class="category"><h3 class="category-title">🥩 午餐+晚餐(烤肉)</h3><div class="item-grid"><div class="item"><span class="item-name">牛肉片一大包</span> <span class="item-person person-uj">UJ</span></div><div class="item"><span class="item-name">豬肉片</span> <span class="item-person person-default">待分配</span></div><div class="item"><span class="item-name">雞排</span> <span class="item-person person-default">待分配</span></div><div class="item"><span class="item-name">玉米/節瓜/杏鮑菇</span> <span class="item-person person-default">待分配</span></div><div class="item"><span class="item-name">包肉生菜</span> <span class="item-person person-default">待分配</span></div><div class="item"><span class="item-name">雞翅/香腸</span> <span class="item-person person-default">待分配</span></div></div></div>
+      <div class="category"><h3 class="category-title">🍲 晚餐/宵夜</h3><div class="item-grid"><div class="item"><span class="item-name">羊肉爐料</span> <span class="item-person person-jy">JY</span></div><div class="item"><span class="item-name">雞湯</span> <span class="item-person person-default">待分配</span></div><div class="item"><span class="item-name">泡麵(5包/人)</span> <span class="item-person person-default">待分配</span></div></div></div>
+      <div class="category"><h3 class="category-title">🥞 早餐/水果/其他</h3><div class="item-grid"><div class="item"><span class="item-name">吐司/培根/蛋</span> <span class="item-person person-default">待分配</span></div><div class="item"><span class="item-name">鬆餅粉</span> <span class="item-person person-niger">Niger</span></div><div class="item"><span class="item-name">草莓/藍莓/香蕉</span> <span class="item-person person-guochu">郭初</span></div><div class="item"><span class="item-name">水/調料/啤酒</span> <span class="item-person person-default">待分配</span></div></div></div>
+      <div class="category"><h3 class="category-title">🧂 消耗品/清潔</h3><div class="item-grid"><div class="item"><span class="item-name">洗碗精</span> <span class="item-person person-niger">Niger</span></div><div class="item"><span class="item-name">菜瓜布</span> <span class="item-person person-niger">Niger</span></div></div></div>
+     </section>
+
+     <!-- 個人物品總覽 -->
+     <section class="section">
+      <h2 class="section-title">📦 個人物品清單總覽 (誰帶什麼)</h2>
+      <div class="tent-grid">
+       <!-- UJ -->
+       <div class="tent-card"><div class="tent-header" style="background: linear-gradient(135deg, #667eea 0%, #5568d3 100%);"><div class="tent-title">📦 UJ (12項)</div></div><div class="tent-members"><div style="padding:0.5rem;font-size:0.9rem;">• 天幕 3x3, 卡式爐(小), 高山瓦斯, 焚火台, 木炭, 煤油, 大烤盤, 小桌子<br>• 牛肉片, 冰桶, 大西瓜, 垃圾袋</div></div></div>
+       <!-- Wen -->
+       <div class="tent-card"><div class="tent-header" style="background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);"><div class="tent-title">📦 Wen (5項)</div></div><div class="tent-members"><div style="padding:0.5rem;font-size:0.9rem;">• 天幕 4x3, 木頭, 噴燈頭, 卡式罐 x9, 大桌子</div></div></div>
+       <!-- JY -->
+       <div class="tent-card"><div class="tent-header" style="background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);"><div class="tent-title">📦 JY (2項)</div></div><div class="tent-members"><div style="padding:0.5rem;font-size:0.9rem;">• 羊肉爐料<br>• 羊五花肉</div></div></div>
+       <!-- Niger -->
+       <div class="tent-card"><div class="tent-header" style="background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);"><div class="tent-title">📦 Niger (5項)</div></div><div class="tent-members"><div style="padding:0.5rem;background: #f7fafc; border-radius: 0.5rem; margin-bottom: 0.5rem;"><div style="font-weight: bold; color: #4a5568;">⛺ 工裝/雜項</div><div style="font-size: 0.9rem; color: #2d3748;">• 卡式爐<br>• 瓦斯<br>• 菜瓜布<br>• 洗碗精</div></div><div style="padding: 0.5rem; background: #f7fafc; border-radius: 0.5rem;"><div style="font-weight: bold; color: #4a5568;">🍖 食物</div><div style="font-size: 0.9rem; color: #2d3748;">• 鬆餅粉</div></div></div></div>
+       <!-- 郭初 -->
+       <div class="tent-card"><div class="tent-header" style="background: linear-gradient(135deg, #FFA500 0%, #FF8C00 100%);"><div class="tent-title">📦 郭初 (12項)</div></div><div class="tent-members"><div style="padding:0.5rem;font-size:0.9rem;">• 氣氛燈, 砧板, 抹布, 夾子, 湯匙<br>• 雞蛋, 水果類, 蔬菜, 手沖咖啡</div></div></div>
+       <!-- YC -->
+       <div class="tent-card"><div class="tent-header" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);"><div class="tent-title">📦 YC (1項)</div></div><div class="tent-members"><div style="padding:0.5rem;font-size:0.9rem;">• 晚上烤肉的東西</div></div></div>
+       <!-- 任新 -->
+       <div class="tent-card"><div class="tent-header" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);"><div class="tent-title">📦 任新 (1項)</div></div><div class="tent-members"><div style="padding:0.5rem;font-size:0.9rem;">• 烤肉爐</div></div></div>
+       <!-- 待分配 -->
+       <div class="tent-card"><div class="tent-header" style="background: linear-gradient(135deg, #a0aec0 0%, #718096 100%);"><div class="tent-title">📦 待分配 (27項)</div></div><div class="tent-members"><div style="padding:0.5rem;font-size:0.9rem; color:#856404;">• 廚具(菜刀/鍋鏟等)<br>• 食材(豬肉/雞排/蔬菜等)<br>• 消耗品(水/調料/啤酒)</div></div></div>
+      </div>
+     </section>
+    </div>
+
+    <!-- Tab 2: 行程規劃頁面 -->
+    <div id="schedulePage" style="display: none;">
+     <!-- 新增：營區導航區塊 -->
+     <section class="section">
+      <h2 class="section-title">📍 營區位置導航</h2>
+      <div style="background: linear-gradient(135deg, #ecfccb 0%, #d9f99d 100%); padding: 1.5rem; border-radius: 0.75rem; text-align: center; border: 2px solid #84cc16;">
+          <div style="font-size: 1.1rem; font-weight: bold; color: #3f6212; margin-bottom: 1rem;">🌲 我們的露營區</div>
+          <!-- 使用您提供的連結 -->
+          <a href="https://maps.app.goo.gl/hZ8ZzSWYgEixyH2eA" target="_blank" style="display: inline-block; background: #ea580c; color: white; padding: 0.75rem 1.5rem; border-radius: 0.5rem; text-decoration: none; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+              🗺️ 開啟 Google Maps 導航
+          </a>
+          <p style="margin-top: 0.8rem; color: #4d7c0f; font-size: 0.9rem;">(點擊按鈕即可開啟地圖)</p>
+      </div>
+     </section>
+
+     <!-- Day 1 -->
+     <section class="section">
+      <h2 class="section-title" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1.25rem;">🌙 Day 1 - 夜衝日 (12/12 晚上)</h2>
+      <div style="background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%); padding: 1.25rem; border-radius: 0.75rem; margin-bottom: 1.5rem; border-left: 4px solid #667eea;">
+       <div style="font-weight: bold; color: #3730a3; margin-bottom: 0.75rem;">👥 夜衝成員 (9人)</div>
+       <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;"><span style="background: white; padding: 0.5rem 1rem; border-radius: 0.5rem;">UJ</span> <span style="background: white; padding: 0.5rem 1rem; border-radius: 0.5rem;">宜珊</span> <span style="background: white; padding: 0.5rem 1rem; border-radius: 0.5rem;">宇凡</span> <span style="background: white; padding: 0.5rem 1rem; border-radius: 0.5rem;">任新</span> <span style="background: white; padding: 0.5rem 1rem; border-radius: 0.5rem;">書珊</span> <span style="background: white; padding: 0.5rem 1rem; border-radius: 0.5rem;">CURRY</span> <span style="background: white; padding: 0.5rem 1rem; border-radius: 0.5rem;">芸芸</span> <span style="background: white; padding: 0.5rem 1rem; border-radius: 0.5rem;">郭初</span> <span style="background: white; padding: 0.5rem 1rem; border-radius: 0.5rem;">丁丁</span></div>
+      </div>
+      <div class="tent-grid">
+       <div class="tent-card"><div class="tent-header"><div class="tent-title">⛺ 搭建 & 晚餐</div></div><div class="tent-members"><div style="padding: 0.75rem; color: #2d3748;">• 搭帳篷 / 架天幕<br>• 簡單晚餐 / 生火</div></div></div>
+       <div class="tent-card"><div class="tent-header" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);"><div class="tent-title">🍺 營火談心</div></div><div class="tent-members"><div style="padding: 0.75rem; color: #2d3748;">• 喝酒聊天<br>• 享受山林</div></div></div>
+      </div>
+      <div style="background: #fee2e2; padding: 1.25rem; border-radius: 0.75rem; margin-top: 1.5rem; border-left: 4px solid #dc2626; color: #991b1b;">
+       ⚠️ <strong>警語:</strong> 禁止玩真心話大冒險、禁止洗車、小心火燭。
+      </div>
+     </section>
+     
+     <!-- Day 2 -->
+     <section class="section">
+      <h2 class="section-title" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 1.25rem;">☀️ Day 2 - 完整活動日 (12/13)</h2>
+      <div style="margin-bottom: 2rem;">
+       <h3 style="font-size: 1.25rem; font-weight: bold; color: #d97706; border-bottom: 3px solid #fbbf24; margin-bottom: 1rem;">🌅 上午 & 下午</h3>
+       <div class="tent-grid">
+        <div class="tent-card"><div class="tent-header" style="background: linear-gradient(135deg, #f472b6 0%, #ec4899 100%);"><div class="tent-title">🏃 早晨活動</div></div><div class="tent-members"><div style="padding: 0.75rem;">• 06:00 晨跑看日出<br>• 準備早餐 & 咖啡</div></div></div>
+        <div class="tent-card"><div class="tent-header" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);"><div class="tent-title">🎮 團康遊戲</div></div><div class="tent-members"><div style="padding: 0.75rem;">• 桌遊 / 含水笑話<br>• 咖啡教室</div></div></div>
+       </div>
+      </div>
+      <div style="margin-bottom: 2rem;">
+        <h3 style="font-size: 1.25rem; font-weight: bold; color: #d97706; border-bottom: 3px solid #fbbf24; margin-bottom: 1rem;">🍖 晚上：豪華烤肉</h3>
+        <div class="tent-card">
+            <div class="tent-header" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);"><div class="tent-title">🔥 烤肉饗宴</div></div>
+            <div class="tent-members"><div style="padding: 0.75rem;">• 烤肉 / 羊肉爐 / 啤酒<br>• Dress Code: 白衣黑褲拍照</div></div>
+        </div>
+      </div>
+     </section>
+
+     <!-- Day 3 -->
+     <section class="section">
+      <h2 class="section-title" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 1.25rem;">🏡 Day 3 - 收拾歸途 (12/14)</h2>
+      <div class="tent-grid">
+       <div class="tent-card"><div class="tent-header" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);"><div class="tent-title">📦 收拾</div></div><div class="tent-members"><div style="padding: 0.75rem;">• 拆帳篷 / 整理裝備<br>• 垃圾分類</div></div></div>
+       <div class="tent-card"><div class="tent-header" style="background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);"><div class="tent-title">📸 合照</div></div><div class="tent-members"><div style="padding: 0.75rem;">• 全員大合照<br>• 快樂賦歸</div></div></div>
+      </div>
+     </section>
+    </div>
+
+    <!-- Tab 3: 要帶的東西 (個人自備) 頁面 -->
+    <div id="packingPage" style="display: none;">
+     <section class="section">
+      <h2 class="section-title">🎒 個人自備物品檢查表</h2>
+      <div style="background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); padding: 1.5rem; border-radius: 0.75rem; border-left: 4px solid #0ea5e9; margin-bottom: 1.5rem;">
+       <div style="font-weight: bold; color: #0c4a6e; font-size: 1.125rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">✅ 請確認以下物品都帶了</div>
+       <div class="item-grid">
+        <div style="background: white; padding: 0.75rem 1rem; border-radius: 0.5rem; border-left: 4px solid #0ea5e9;"><span style="font-size: 1.5rem;">👕</span> <span style="font-size: 0.95rem; font-weight: 500;">換洗衣物 (含白衣黑褲)</span></div>
+        <div style="background: white; padding: 0.75rem 1rem; border-radius: 0.5rem; border-left: 4px solid #0ea5e9;"><span style="font-size: 1.5rem;">🧥</span> <span style="font-size: 0.95rem; font-weight: 500;">保暖外套 (山區冷)</span></div>
+        <div style="background: white; padding: 0.75rem 1rem; border-radius: 0.5rem; border-left: 4px solid #0ea5e9;"><span style="font-size: 1.5rem;">🛁</span> <span style="font-size: 0.95rem; font-weight: 500;">浴巾 / 毛巾</span></div>
+        <div style="background: white; padding: 0.75rem 1rem; border-radius: 0.5rem; border-left: 4px solid #0ea5e9;"><span style="font-size: 1.5rem;">🪥</span> <span style="font-size: 0.95rem; font-weight: 500;">牙刷牙膏 / 盥洗用品</span></div>
+        <div style="background: white; padding: 0.75rem 1rem; border-radius: 0.5rem; border-left: 4px solid #0ea5e9;"><span style="font-size: 1.5rem;">🛏️</span> <span style="font-size: 0.95rem; font-weight: 500;">棉被 / 睡袋 / 枕頭</span></div>
+        <div style="background: white; padding: 0.75rem 1rem; border-radius: 0.5rem; border-left: 4px solid #0ea5e9;"><span style="font-size: 1.5rem;">🥢</span> <span style="font-size: 0.95rem; font-weight: 500;">環保餐具 (碗/筷/杯)</span></div>
+        <div style="background: white; padding: 0.75rem 1rem; border-radius: 0.5rem; border-left: 4px solid #0ea5e9;"><span style="font-size: 1.5rem;">🪑</span> <span style="font-size: 0.95rem; font-weight: 500;">個人摺疊椅</span></div>
+        <div style="background: white; padding: 0.75rem 1rem; border-radius: 0.5rem; border-left: 4px solid #0ea5e9;"><span style="font-size: 1.5rem;">🔌</span> <span style="font-size: 0.95rem; font-weight: 500;">充電器 / 行動電源</span></div>
+        <div style="background: white; padding: 0.75rem 1rem; border-radius: 0.5rem; border-left: 4px solid #0ea5e9;"><span style="font-size: 1.5rem;">🔦</span> <span style="font-size: 0.95rem; font-weight: 500;">手電筒 / 頭燈</span></div>
+        <div style="background: white; padding: 0.75rem 1rem; border-radius: 0.5rem; border-left: 4px solid #0ea5e9;"><span style="font-size: 1.5rem;">💊</span> <span style="font-size: 0.95rem; font-weight: 500;">個人藥品 / 防蚊液</span></div>
+       </div>
+      </div>
+      <div style="background: #fef3c7; padding: 1rem; border-radius: 0.75rem; border-left: 4px solid #f59e0b;">
+       <div style="font-weight: bold; color: #92400e; margin-bottom: 0.5rem;">💡 貼心提醒</div>
+       <div style="font-size: 0.9rem; color: #92400e; line-height: 1.6;">
+        • 12月山區夜間溫度較低，請務必攜帶足夠保暖衣物。<br>
+        • 為了環保，請大家盡量自備餐具，減少一次性垃圾。<br>
+        • 晚上可能會玩含水笑話，建議多帶一條毛巾擦臉 XD
+       </div>
+      </div>
+     </section>
+    </div>
+
+    <!-- Tab 4: 花費金額 (費用明細) 頁面 -->
+    <div id="expensesPage" style="display: none;">
+     <section class="section">
+      <h2 class="section-title">💰 費用明細與分攤</h2>
+      
+      <!-- 總覽卡片 (動態更新) -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 1.5rem; border-radius: 1rem; color: white; text-align: center;">
+            <div style="font-size: 0.9rem; opacity: 0.9;">總公費支出 (不含帳篷)</div>
+            <div id="totalPublicExpense" style="font-size: 2rem; font-weight: bold;">$ 0</div>
+        </div>
+        <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 1.5rem; border-radius: 1rem; color: white; text-align: center;">
+            <div style="font-size: 0.9rem; opacity: 0.9;">每人應付公費 (15人)</div>
+            <div id="perPersonExpense" style="font-size: 2rem; font-weight: bold;">$ 0</div>
+        </div>
+      </div>
+
+      <!-- 新增：自動輸入表單 -->
+      <div class="expense-form-container">
+        <div class="expense-form-title">➕ 新增支出項目 (自動計算公費)</div>
+        <div class="expense-input-group">
+            <input type="text" id="expenseItem" placeholder="品項 (如: 好市多肉品)" class="expense-input" style="flex: 2;">
+            <input type="number" id="expenseAmount" placeholder="金額" class="expense-input" style="flex: 1;">
+            <select id="expensePayer" class="expense-input" style="flex: 1;">
+                <option value="" disabled selected>墊付人</option>
+                <option value="UJ">UJ</option>
+                <option value="Wen">Wen</option>
+                <option value="JY">JY</option>
+                <option value="Niger">Niger</option>
+                <option value="六">六</option>
+                <option value="大頭">大頭</option>
+                <option value="郭初">郭初</option>
+                <option value="Curry">Curry</option>
+                <option value="芸芸">芸芸</option>
+                <option value="丁丁">丁丁</option>
+                <option value="YC">YC</option>
+                <option value="任新">任新</option>
+                <option value="宜珊">宜珊</option>
+                <option value="宇凡">宇凡</option>
+                <option value="力樊">力樊</option>
+                <option value="靜汶">靜汶</option>
+                <option value="淑蓁">淑蓁</option>
+                <option value="書珊">書珊</option>
+                <option value="俊宇">俊宇</option>
+                <option value="佳眉">佳眉</option>
+            </select>
+            <button onclick="addExpense()" class="expense-btn-add">新增</button>
+        </div>
+      </div>
+
+      <!-- 費用列表 -->
+      <div class="category">
+        <h3 class="category-title">🧾 支出項目列表</h3>
+        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 0.5rem; overflow: hidden;">
+            <div style="display: flex; background: #f7fafc; padding: 0.75rem; font-weight: bold; color: #4a5568; border-bottom: 1px solid #e2e8f0;">
+                <div style="flex: 2;">項目</div>
+                <div style="flex: 1; text-align: right;">金額</div>
+                <div style="flex: 1; text-align: center;">墊付人</div>
+                <div style="width: 30px;"></div>
+            </div>
+            
+            <!-- 靜態項目：租帳篷 (特殊分攤) -->
+            <div style="display: flex; padding: 0.75rem; border-bottom: 1px solid #edf2f7; align-items: center; background-color: #fffbeb;">
+                <div style="flex: 2;">
+                    <span style="font-weight: bold; color: #b45309;">🏕️ 租帳篷費用</span><br>
+                    <span style="font-size: 0.85rem; color: #78350f;">(Curry, 芸芸, 郭初, 丁丁 分攤: $938/人)</span>
+                </div>
+                <div style="flex: 1; text-align: right; color: #e53e3e; font-weight: bold;">$ 3,750</div>
+                <div style="flex: 1; text-align: center;"><span style="background: #fef3c7; color: #92400e; padding: 0.2rem 0.5rem; border-radius: 1rem; font-size: 0.8rem;">Curry</span></div>
+                <div style="width: 30px;"></div>
+            </div>
+
+            <!-- 動態項目容器 -->
+            <div id="expenseListContainer"></div>
+        </div>
+      </div>
+     </section>
+    </div>
+
+    <footer class="footer">
+      <span>📋 請確認所有項目準備齊全 | 祝大家露營愉快! 🏕️</span>
+    </footer>
+   </main>
+
+   <!-- 右側邊欄：籃球遊戲 (保持不變) -->
+   <aside class="sidebar">
+    <h3 class="sidebar-title">🏀 籃球投籃機</h3>
+    <div class="score-board score-display">
+     <div class="score-row"><span>🎯 投籃次數:</span> <span id="totalShots">0</span></div>
+     <div class="score-row"><span>✅ 進球數:</span> <span id="madeShots">0</span></div>
+     <div class="score-row"><span>🎯 命中率:</span> <span id="accuracy">0%</span></div>
+    </div>
+    <div class="game-area" id="gameArea">
+     <div class="backboard"><div class="backboard-square"></div></div>
+     <div class="hoop"><div class="hoop-rim"></div><div class="hoop-net"></div></div>
+     <div class="basketball" id="basketball"></div>
+    </div>
+    <div class="score-display" id="resultMessage" style="margin-top: 1rem; font-size: 1.1rem; font-weight: bold; min-height: 2rem; display: flex; align-items: center; justify-content: center;">
+     點擊籃球投籃! 🏀
+    </div>
+    <div class="camping-images">
+     <div class="camping-icon" title="帳篷">⛺</div>
+     <div class="camping-icon" title="營火">🔥</div>
+     <div class="camping-icon" title="烤肉">🍖</div>
+     <div class="camping-icon" title="咖啡">☕</div>
+     <div class="camping-icon" title="星空">🌟</div>
+    </div>
+   </aside>
+  </div>
+
+  <script>
+    // 籃球與 SDK 邏輯 (保持不變)
+    const basketball = document.getElementById('basketball');
+    const totalShotsDisplay = document.getElementById('totalShots');
+    const madeShotsDisplay = document.getElementById('madeShots');
+    const accuracyDisplay = document.getElementById('accuracy');
+    const scoreBoard = document.querySelector('.score-board');
+    const resultMessage = document.getElementById('resultMessage');
+    
+    let totalShots = 0;
+    let madeShots = 0;
+    let isShooting = false;
+    
+    basketball.addEventListener('click', () => {
+      if (isShooting) return;
+      isShooting = true;
+      totalShots++;
+      totalShotsDisplay.textContent = totalShots;
+      const isScore = Math.random() < 0.6; 
+      const startBottom = 20;
+      const peakBottom = 380;
+      const randomOffsetX = (Math.random() - 0.5) * 20;
+      let progress = 0;
+      const duration = 1200;
+      const startTime = Date.now();
+      
+      function animateShot() {
+        const currentTime = Date.now();
+        progress = Math.min((currentTime - startTime) / duration, 1);
+        let currentBottom;
+        let currentLeft;
+        
+        if (progress <= 0.5) {
+          const upProgress = progress * 2;
+          currentBottom = startBottom + (peakBottom - startBottom) * upProgress;
+          currentLeft = 50 + randomOffsetX * upProgress;
+        } else {
+          const downProgress = (progress - 0.5) * 2;
+          const fallHeight = peakBottom - startBottom;
+          currentBottom = peakBottom - fallHeight * downProgress;
+          currentLeft = 50 + randomOffsetX;
+          currentBottom = Math.max(startBottom, currentBottom);
+        }
+        
+        basketball.style.left = currentLeft + '%';
+        basketball.style.bottom = currentBottom + 'px';
+        basketball.style.transform = `translateX(-50%) rotate(${progress * 720}deg)`;
+        
+        if (progress < 1) {
+          requestAnimationFrame(animateShot);
+        } else {
+          if (isScore) {
+            madeShots++;
+            madeShotsDisplay.textContent = madeShots;
+            resultMessage.textContent = '🎉 進球!';
+            resultMessage.style.color = '#10b981';
+            resultMessage.style.animation = 'show-result 1s ease-out';
+            scoreBoard.style.animation = 'score-flash 0.5s';
+            setTimeout(() => { scoreBoard.style.animation = ''; resultMessage.style.animation = ''; }, 1000);
+          } else {
+            resultMessage.textContent = '❌ 沒中!';
+            resultMessage.style.color = '#ef4444';
+            resultMessage.style.animation = 'show-result 1s ease-out';
+            scoreBoard.style.animation = 'miss-flash 0.5s';
+            setTimeout(() => { scoreBoard.style.animation = ''; resultMessage.style.animation = ''; }, 1000);
+          }
+          const accuracy = Math.round((madeShots / totalShots) * 100);
+          accuracyDisplay.textContent = accuracy + '%';
+          setTimeout(() => {
+            basketball.style.left = '50%';
+            basketball.style.bottom = '20px';
+            basketball.style.transform = 'translateX(-50%)';
+            isShooting = false;
+          }, 600);
+        }
+      }
+      animateShot();
+    });
+
+    // 費用自動計算邏輯 (LocalStorage 持久化版)
+    let expenses = JSON.parse(localStorage.getItem('camping_expenses')) || [];
+
+    // 初始化渲染
+    renderExpenses();
+
+    function addExpense() {
+        const itemInput = document.getElementById('expenseItem');
+        const amountInput = document.getElementById('expenseAmount');
+        const payerInput = document.getElementById('expensePayer');
+
+        const item = itemInput.value.trim();
+        const amount = parseInt(amountInput.value);
+        const payer = payerInput.value;
+
+        if (!item || isNaN(amount) || !payer) {
+            alert("請完整填寫 品項、金額 與 墊付人 喔！");
+            return;
+        }
+
+        expenses.push({ item, amount, payer });
+        localStorage.setItem('camping_expenses', JSON.stringify(expenses));
+
+        itemInput.value = '';
+        amountInput.value = '';
+        payerInput.value = '';
+
+        renderExpenses();
+    }
+
+    function renderExpenses() {
+        const listContainer = document.getElementById('expenseListContainer');
+        const totalEl = document.getElementById('totalPublicExpense');
+        const perPersonEl = document.getElementById('perPersonExpense');
+
+        listContainer.innerHTML = ''; 
+
+        let totalAmount = 0;
+
+        expenses.forEach((exp, index) => {
+            totalAmount += exp.amount;
+
+            const row = document.createElement('div');
+            row.style.display = 'flex';
+            row.style.padding = '0.75rem';
+            row.style.borderBottom = '1px solid #edf2f7';
+            row.style.alignItems = 'center';
+            
+            row.innerHTML = `
+                <div style="flex: 2;">${exp.item}</div>
+                <div style="flex: 1; text-align: right; color: #e53e3e; font-weight: bold;">$ ${exp.amount.toLocaleString()}</div>
+                <div style="flex: 1; text-align: center;"><span style="background: #e2e8f0; padding: 0.2rem 0.5rem; border-radius: 1rem; font-size: 0.8rem;">${exp.payer}</span></div>
+                <div style="width: 30px; text-align: center; cursor: pointer; color: #9ca3af;" onclick="deleteExpense(${index})" title="刪除">✕</div>
+            `;
+            listContainer.appendChild(row);
+        });
+
+        const perPerson = Math.round(totalAmount / 15);
+        
+        totalEl.textContent = `$ ${totalAmount.toLocaleString()}`;
+        perPersonEl.textContent = `$ ${perPerson.toLocaleString()}`;
+    }
+
+    function deleteExpense(index) {
+        if(confirm('確定要刪除這筆項目嗎？')) {
+            expenses.splice(index, 1);
+            localStorage.setItem('camping_expenses', JSON.stringify(expenses));
+            renderExpenses();
+        }
+    }
+
+    // 分頁切換邏輯
+    function switchTab(tabName) {
+        const pages = ['equipmentPage', 'schedulePage', 'packingPage', 'expensesPage'];
+        const tabs = ['tabEquipment', 'tabSchedule', 'tabPacking', 'tabExpenses'];
+        
+        const map = { 'equipment': 0, 'schedule': 1, 'packing': 2, 'expenses': 3 };
+        const activeIndex = map[tabName];
+
+        pages.forEach((pageId, index) => {
+            const pageEl = document.getElementById(pageId);
+            const btnEl = document.getElementById(tabs[index]);
+            
+            if (index === activeIndex) {
+                pageEl.style.display = 'block';
+                btnEl.classList.remove('nav-btn-inactive');
+                btnEl.classList.add('nav-btn-active');
+            } else {
+                pageEl.style.display = 'none';
+                btnEl.classList.remove('nav-btn-active');
+                btnEl.classList.add('nav-btn-inactive');
+            }
+        });
+    }
+  </script>
+ </body>
+</html>
