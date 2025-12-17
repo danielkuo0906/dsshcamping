@@ -1,0 +1,437 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Camera, Search, User, Briefcase, Smile, ChevronLeft, Plus, Users, Trash2, Timer, Award, Calendar } from 'lucide-react';
+
+export default function RunnerCheckInApp() {
+  // 頁面狀態: 'home' (列表), 'add' (新增), 'profile' (個人詳情)
+  const [view, setView] = useState('home');
+  const [runners, setRunners] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedRunner, setSelectedRunner] = useState(null);
+  const [showTodayOnly, setShowTodayOnly] = useState(true); // 預設只看今天
+  
+  // 使用 useRef 來處理表單輸入 (徹底解決重新渲染導致資料清空的問題)
+  const nameRef = useRef(null);
+  const jobRef = useRef(null);
+  const featureRef = useRef(null);
+  const yearsRef = useRef(null);
+  const paceRef = useRef(null); // 改用 Ref 來儲存配速選擇
+  
+  // 只有照片預覽需要 State，因為它需要即時更新畫面顯示圖片
+  const [photoPreview, setPhotoPreview] = useState(null);
+
+  // 配速選項
+  const paceOptions = [
+    { label: '🚀 3分速 (菁英組)', value: '3分速' },
+    { label: '🔥 4分速 (挑戰組)', value: '4分速' },
+    { label: '🏃 5分速 (常態組)', value: '5分速' },
+    { label: '💦 6分速 (慢跑組)', value: '6分速' },
+    { label: '🐢 7分速 (養生組)', value: '7分速' },
+    { label: '🍗 歡樂吃喝組', value: '歡樂吃喝組' },
+  ];
+
+  // 讀取 LocalStorage 資料
+  useEffect(() => {
+    const savedRunners = localStorage.getItem('runnerData');
+    if (savedRunners) {
+      setRunners(JSON.parse(savedRunners));
+    }
+  }, []);
+
+  // 儲存資料到 LocalStorage
+  const saveToStorage = (data) => {
+    localStorage.setItem('runnerData', JSON.stringify(data));
+  };
+
+  // 處理照片上傳
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // 提交新跑者
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    
+    // 從 ref 獲取當前值
+    const nameVal = nameRef.current.value;
+    // 處理空值轉換為 0 或保持原本輸入，這裡簡單處理轉換 float
+    const yearsVal = yearsRef.current.value ? parseFloat(yearsRef.current.value) : 0;
+    const paceVal = paceRef.current.value; // 從 Ref 讀取配速
+    
+    if (!nameVal || !photoPreview) {
+      alert("請填寫名字並拍一張照片！");
+      return;
+    }
+
+    if (yearsVal < 0) {
+      alert("跑齡不能是負數喔！時間是不能倒流的 XD");
+      return;
+    }
+
+    const runnerEntry = {
+      id: Date.now(),
+      name: nameRef.current.value,
+      job: jobRef.current.value,
+      feature: featureRef.current.value,
+      years: yearsRef.current.value,
+      pace: paceVal,
+      photo: photoPreview,
+      date: new Date().toLocaleDateString('zh-TW'), // 記錄日期用於篩選
+      timestamp: Date.now()
+    };
+
+    const updatedRunners = [runnerEntry, ...runners];
+    setRunners(updatedRunners);
+    saveToStorage(updatedRunners);
+    
+    // 重置表單並返回
+    setPhotoPreview(null);
+    // Ref 的值會隨著組件卸載(切換view)自動重置，不需要手動清空
+    setView('home');
+  };
+
+  // 刪除跑者
+  const handleDelete = (id, e) => {
+    e.stopPropagation();
+    if (confirm("確定要刪除這位跑者的資料嗎？")) {
+      const updated = runners.filter(r => r.id !== id);
+      setRunners(updated);
+      saveToStorage(updated);
+      if (selectedRunner?.id === id) setView('home');
+    }
+  };
+
+  // 取得今天的日期字串
+  const todayStr = new Date().toLocaleDateString('zh-TW');
+
+  // 過濾搜尋 + 日期篩選
+  const filteredRunners = runners.filter(r => {
+    const matchesSearch = 
+      r.name.includes(searchTerm) || 
+      (r.job && r.job.includes(searchTerm)) || 
+      (r.feature && r.feature.includes(searchTerm)) ||
+      (r.pace && r.pace.includes(searchTerm));
+      
+    const matchesDate = showTodayOnly ? r.date === todayStr : true;
+    
+    return matchesSearch && matchesDate;
+  });
+
+  return (
+    <div className="font-sans max-w-md mx-auto bg-zinc-900 h-screen overflow-hidden flex flex-col relative shadow-2xl shadow-black/50">
+      
+      {/* 主要內容區 */}
+      <div className="flex-1 overflow-y-auto scrollbar-hide">
+        
+        {/* === 1. 首頁 View === */}
+        {view === 'home' && (
+          <div className="space-y-4 pb-24 bg-zinc-900 min-h-screen">
+            {/* 修改：移除漸層，改為純色 bg-lime-400 */}
+            <header className="bg-lime-400 p-6 rounded-b-3xl shadow-lg text-black">
+              <div className="flex justify-between items-start mb-4">
+                <div className="flex items-center gap-3">
+                  <img 
+                    src="/public/data/image_5a1f5f.png" 
+                    alt="NDL Logo" 
+                    className="w-16 h-16 object-contain" 
+                    onError={(e) => e.target.style.display = 'none'}
+                  />
+                  {/* 修改：文字改為 NERDINLOOP */}
+                  <h1 className="text-2xl font-black tracking-wider">
+                    NERDINLOOP <span className="text-sm block font-bold opacity-70">SIGN IN</span>
+                  </h1>
+                </div>
+                <div className="text-xs bg-black/80 text-lime-400 px-3 py-1 rounded-full backdrop-blur-sm font-mono">
+                  {todayStr}
+                </div>
+              </div>
+              
+              {/* 簽到牆切換器 */}
+              <div className="flex p-1 bg-black/20 rounded-xl mt-4 mb-4">
+                <button 
+                  onClick={() => setShowTodayOnly(true)}
+                  className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all flex items-center justify-center gap-1 ${showTodayOnly ? 'bg-black text-lime-400 shadow-sm font-bold' : 'text-black/60 hover:text-black'}`}
+                >
+                  <Calendar size={14} /> 今日簽到
+                </button>
+                <button 
+                  onClick={() => setShowTodayOnly(false)}
+                  className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all flex items-center justify-center gap-1 ${!showTodayOnly ? 'bg-black text-lime-400 shadow-sm font-bold' : 'text-black/60 hover:text-black'}`}
+                >
+                  <Users size={14} /> 所有成員
+                </button>
+              </div>
+
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="搜尋名字、職業、配速..."
+                  className="w-full p-3 pl-10 rounded-xl text-zinc-200 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-lime-400 shadow-inner bg-zinc-800/80 backdrop-blur-sm"
+                  defaultValue={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <Search className="absolute left-3 top-3.5 text-zinc-500 w-5 h-5" />
+              </div>
+            </header>
+
+            <div className="px-4">
+              {runners.length === 0 ? (
+                <div className="text-center py-20 text-zinc-500">
+                  <div className="bg-zinc-800 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-zinc-700">
+                    <Camera className="w-10 h-10 text-zinc-600" />
+                  </div>
+                  <p className="text-lg font-medium text-zinc-400">還沒有人打卡喔！</p>
+                  <p className="text-sm">成為今天第一個打卡的跑者吧</p>
+                </div>
+              ) : filteredRunners.length === 0 ? (
+                <div className="text-center py-20 text-zinc-500">
+                  <p className="text-lg text-zinc-400">
+                    {showTodayOnly ? '今天還沒人打卡 😴' : '找不到符合的跑者'}
+                  </p>
+                  {showTodayOnly && <p className="text-sm mt-2">切換到「所有成員」看看老朋友？</p>}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  {filteredRunners.map(runner => (
+                    <div 
+                      key={runner.id}
+                      onClick={() => { setSelectedRunner(runner); setView('profile'); }}
+                      className="bg-zinc-800 rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition-all cursor-pointer border border-zinc-700 group"
+                    >
+                      <div className="h-40 bg-zinc-700 relative overflow-hidden">
+                        <img src={runner.photo} alt={runner.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-3 pt-8">
+                          <span className="text-white font-bold truncate text-lg block">{runner.name}</span>
+                        </div>
+                        <div className="absolute top-2 right-2 bg-black/70 backdrop-blur-md px-2 py-1 rounded-md text-[10px] font-bold text-lime-400 shadow-sm border border-lime-400/30">
+                          {runner.pace || '歡樂組'}
+                        </div>
+                      </div>
+                      <div className="p-3">
+                        <div className="flex flex-wrap gap-1 mb-2">
+                          <span className="text-[10px] bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded-full flex items-center border border-zinc-600">
+                              <Briefcase size={8} className="mr-1"/> {runner.job || '未填寫'}
+                          </span>
+                        </div>
+                        <div className="text-xs text-lime-400 bg-zinc-900/50 px-2 py-1.5 rounded-lg line-clamp-1 border border-lime-400/20">
+                          ✨ {runner.feature || '愛跑步'}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* === 2. 新增 View === */}
+        {view === 'add' && (
+          <div className="p-4 h-full flex flex-col bg-zinc-900 text-white">
+            <div className="flex items-center mb-6">
+              <button onClick={() => setView('home')} className="p-2 bg-zinc-800 rounded-full mr-3 hover:bg-zinc-700 transition-colors">
+                <ChevronLeft size={24} className="text-zinc-300" />
+              </button>
+              <h2 className="text-xl font-bold">打卡簽到</h2>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-6 flex-1 overflow-y-auto pb-10">
+              <div className="flex flex-col items-center justify-center">
+                <label className="relative w-40 h-40 bg-zinc-800 rounded-full flex flex-col items-center justify-center border-2 border-dashed border-zinc-600 cursor-pointer overflow-hidden group hover:border-lime-400 transition-colors">
+                  {photoPreview ? (
+                    <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <>
+                      <Camera className="w-10 h-10 text-zinc-500 mb-2 group-hover:text-lime-400 transition-colors" />
+                      <span className="text-xs text-zinc-400 font-medium group-hover:text-lime-400">點擊拍照</span>
+                    </>
+                  )}
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    capture="user" 
+                    onChange={handleImageChange} 
+                    className="hidden" 
+                  />
+                </label>
+              </div>
+
+              <div className="space-y-5">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wide mb-1 ml-1">稱呼 (暱稱)</label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-3.5 text-zinc-500 w-5 h-5" />
+                      <input
+                        ref={nameRef}
+                        type="text"
+                        required
+                        defaultValue=""
+                        className="w-full pl-10 p-3 bg-zinc-800 border border-zinc-700 rounded-xl focus:ring-2 focus:ring-lime-400 focus:outline-none transition-all text-white placeholder-zinc-500"
+                        placeholder="例如：小明"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wide mb-1 ml-1">跑齡 (年)</label>
+                    <div className="relative">
+                      <Award className="absolute left-3 top-3.5 text-zinc-500 w-5 h-5" />
+                      <input
+                        ref={yearsRef}
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        defaultValue=""
+                        className="w-full pl-10 p-3 bg-zinc-800 border border-zinc-700 rounded-xl focus:ring-2 focus:ring-lime-400 focus:outline-none transition-all text-white placeholder-zinc-500"
+                        placeholder="如: 1.5"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wide mb-1 ml-1">職業</label>
+                    <div className="relative">
+                      <Briefcase className="absolute left-3 top-3.5 text-zinc-500 w-5 h-5" />
+                      <input
+                        ref={jobRef}
+                        type="text"
+                        defaultValue=""
+                        className="w-full pl-10 p-3 bg-zinc-800 border border-zinc-700 rounded-xl focus:ring-2 focus:ring-lime-400 focus:outline-none transition-all text-white placeholder-zinc-500"
+                        placeholder="如: 工程師"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wide mb-1 ml-1">常態配速分組</label>
+                  <div className="relative">
+                    <Timer className="absolute left-3 top-3.5 text-zinc-500 w-5 h-5 pointer-events-none" />
+                    <select
+                      ref={paceRef}
+                      defaultValue="歡樂吃喝組"
+                      className="w-full pl-10 p-3 bg-zinc-800 border border-zinc-700 rounded-xl focus:ring-2 focus:ring-lime-400 focus:outline-none appearance-none text-white"
+                    >
+                      {paceOptions.map(opt => (
+                        <option key={opt.value} value={opt.value} className="bg-zinc-800">{opt.label}</option>
+                      ))}
+                    </select>
+                    <div className="absolute right-3 top-4 pointer-events-none text-zinc-500 text-xs">▼</div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wide mb-1 ml-1">
+                    好記特徵 (選填)
+                  </label>
+                  <div className="relative">
+                    <Smile className="absolute left-3 top-3.5 text-zinc-500 w-5 h-5" />
+                    <textarea
+                      ref={featureRef}
+                      rows="2"
+                      className="w-full pl-10 p-3 bg-zinc-800 border border-zinc-700 rounded-xl focus:ring-2 focus:ring-lime-400 focus:outline-none transition-all resize-none text-white placeholder-zinc-500"
+                      placeholder="例如：總是穿螢光襪、跑完必喝可樂"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <button 
+                type="submit" 
+                className="w-full bg-lime-500 text-black p-4 rounded-xl font-bold text-lg shadow-lg shadow-lime-500/20 active:scale-95 transition-all mt-4 hover:bg-lime-400"
+              >
+                完成簽到 ✅
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* === 3. 詳情 View === */}
+        {view === 'profile' && selectedRunner && (
+          <div className="h-full bg-zinc-900 flex flex-col">
+            <div className="relative h-2/5 group">
+              <img src={selectedRunner.photo} alt={selectedRunner.name} className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors" />
+              <button 
+                onClick={() => setView('home')} 
+                className="absolute top-4 left-4 bg-black/50 p-2 rounded-full text-white backdrop-blur-sm hover:bg-black/70 transition-colors"
+              >
+                <ChevronLeft size={24} />
+              </button>
+              <button 
+                onClick={(e) => handleDelete(selectedRunner.id, e)}
+                className="absolute top-4 right-4 bg-red-500/80 p-2 rounded-full text-white backdrop-blur-sm hover:bg-red-600 transition-colors"
+              >
+                <Trash2 size={20} />
+              </button>
+            </div>
+            
+            <div className="flex-1 bg-zinc-900 -mt-8 rounded-t-3xl p-6 relative z-10 shadow-[0_-5px_25px_rgba(0,0,0,0.3)] overflow-y-auto border-t border-zinc-800">
+              <div className="flex justify-between items-start mb-1">
+                <h2 className="text-3xl font-bold text-white">{selectedRunner.name}</h2>
+                <span className={`text-xs px-3 py-1 rounded-full font-medium border ${selectedRunner.date === todayStr ? 'bg-lime-500/20 text-lime-400 border-lime-500/30' : 'bg-zinc-800 text-zinc-400 border-zinc-700'}`}>
+                  {selectedRunner.date === todayStr ? '🟢 今日已簽到' : `上次: ${selectedRunner.date}`}
+                </span>
+              </div>
+              <p className="text-lime-400 font-medium mb-6">{selectedRunner.pace || '未分組'} 列車</p>
+              
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-zinc-800 p-4 rounded-2xl border border-zinc-700">
+                      <div className="flex items-center gap-2 text-zinc-400 mb-1 text-xs font-bold uppercase">
+                        <Briefcase size={14} /> 職業
+                      </div>
+                      <div className="font-bold text-white text-lg">
+                        {selectedRunner.job || '—'}
+                      </div>
+                  </div>
+                  <div className="bg-zinc-800 p-4 rounded-2xl border border-zinc-700">
+                      <div className="flex items-center gap-2 text-zinc-400 mb-1 text-xs font-bold uppercase">
+                        <Award size={14} /> 跑齡
+                      </div>
+                      <div className="font-bold text-white text-lg">
+                        {selectedRunner.years ? `${selectedRunner.years} 年` : '新手'}
+                      </div>
+                  </div>
+                </div>
+
+                <div className="bg-zinc-800/50 p-5 rounded-2xl border border-lime-500/30">
+                  <div className="flex items-center gap-2 text-lime-400 mb-2 text-xs font-bold uppercase">
+                      <Smile size={16} /> 記憶特徵
+                  </div>
+                  <p className="text-lg font-medium text-white leading-relaxed">
+                    {selectedRunner.feature || '這位跑者很神秘，快去認識他！'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+      </div>
+
+      {/* 底部導航按鈕 (只在首頁顯示) */}
+      {view === 'home' && (
+        <div className="absolute bottom-8 left-0 right-0 flex justify-center px-4 pointer-events-none">
+          <button 
+            onClick={() => setView('add')}
+            className="pointer-events-auto bg-black text-lime-400 rounded-2xl px-8 py-4 shadow-xl shadow-lime-500/20 flex items-center gap-3 transform transition-all active:scale-95 hover:bg-zinc-900 hover:shadow-2xl border border-lime-500/30"
+          >
+            <Plus size={24} className="text-lime-400" />
+            <div className="text-left">
+              <span className="block font-bold text-lg leading-none">我要簽到</span>
+              <span className="text-[10px] text-lime-500 font-medium tracking-wider">CHECK IN</span>
+            </div>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
